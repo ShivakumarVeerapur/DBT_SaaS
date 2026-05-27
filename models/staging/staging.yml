@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: stg_users
+    description: Cleaned 1:1 staging model for raw users table.
+    columns:
+      - name: user_id
+        description: Unique user identifier.
+        tests:
+          - not_null
+          - unique
+      - name: signup_date
+        description: Date user signed up.
+        tests:
+          - not_null
+      - name: country
+        description: User country.
+      - name: plan_type
+        description: User plan type at signup.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['free', 'basic', 'pro']
+
+  - name: stg_subscriptions
+    description: Cleaned 1:1 staging model for raw subscriptions table.
+    columns:
+      - name: subscription_id
+        description: Unique subscription identifier.
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: User who owns the subscription.
+        tests:
+          - not_null
+      - name: start_date
+        description: Subscription start date.
+        tests:
+          - not_null
+      - name: end_date
+        description: Subscription end date, nullable if still active.
+      - name: monthly_price
+        description: Monthly subscription price in Euro.
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+
+  - name: stg_events
+    description: Cleaned 1:1 staging model for raw events table.
+    columns:
+      - name: event_id
+        description: Unique event identifier.
+        tests:
+          - not_null
+          - unique
+      - name: user_id
+        description: User performing the event.
+        tests:
+          - not_null
+      - name: event_type
+        description: Type of event.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['login', 'feature_used', 'upgrade']
+      - name: event_timestamp
+        description: Event timestamp.
+        tests:
+          - not_null

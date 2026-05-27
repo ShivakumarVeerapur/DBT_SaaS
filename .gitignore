@@ -1,0 +1,27 @@
+.DS_Store
+
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
+profiles.yml
+
+# python
+.venv/
+__pycache__/
+.pytest_cache/
+
+# credentials / secrets
+gcp-key.json
+*.key
+*.pem
+*.p12
+.env
+.env.*
+
+# Tableau temporary and recovery files
+*.~*
+.~*
+*.tmp
+

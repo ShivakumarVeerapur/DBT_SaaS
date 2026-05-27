@@ -1,0 +1,52 @@
+version: 2
+
+semantic_models:
+  - name: subscription
+    description: "Semantic model over the fct_subscriptions fact table."
+    model: ref('fct_subscriptions')
+    defaults:
+      agg_time_dimension: month_start
+    
+    entities:
+      - name: subscription
+        type: primary
+        expr: subscription_id
+      - name: user
+        type: foreign
+        expr: user_id
+    
+    dimensions:
+      - name: month_start
+        type: time
+        type_params:
+          time_granularity: month
+      - name: subscription_status
+        type: categorical
+      - name: active_flag
+        type: categorical
+      - name: new_subscriber_flag
+        type: categorical
+      - name: churned_subscriber_flag
+        type: categorical
+
+    measures:
+      - name: total_monthly_revenue
+        description: "Total monthly recurring revenue."
+        expr: monthly_revenue
+        agg: sum
+
+      - name: count_active_subscribers
+        description: "Number of active subscribers in a month."
+        expr: case when active_flag = 1 then user_id else null end
+        agg: count_distinct
+
+      - name: count_new_subscribers
+        description: "Number of new subscribers in a month."
+        expr: case when new_subscriber_flag = 1 then user_id else null end
+        agg: count_distinct
+
+      - name: count_churned_subscribers
+        description: "Number of churned subscribers in a month."
+        expr: case when churned_subscriber_flag = 1 then user_id else null end
+        agg: count_distinct
+

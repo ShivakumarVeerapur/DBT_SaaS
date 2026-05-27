@@ -1,0 +1,30 @@
+version: 2
+
+metrics:
+  - name: mrr
+    description: "Total Monthly Recurring Revenue (MRR)."
+    type: simple
+    label: "Monthly Recurring Revenue"
+    type_params:
+      measure: total_monthly_revenue
+
+  - name: active_subscribers
+    description: "Number of Active Subscribers."
+    type: simple
+    label: "Active Subscribers"
+    type_params:
+      measure: count_active_subscribers
+
+  - name: new_subscribers
+    description: "Number of New Subscribers."
+    type: simple
+    label: "New Subscribers"
+    type_params:
+      measure: count_new_subscribers
+
+  - name: churned_subscribers
+    description: "Number of Churned Subscribers."
+    type: simple
+    label: "Churned Subscribers"
+    type_params:
+      measure: count_churned_subscribers

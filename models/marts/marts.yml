@@ -1,0 +1,98 @@
+version: 2
+
+models:
+  - name: dim_users
+    description: Dimension table containing one row per user.
+    columns:
+      - name: user_id
+        description: Unique user identifier.
+        tests:
+          - not_null
+          - unique
+      - name: signup_date
+        description: Date the user signed up.
+      - name: country
+        description: User's country of residence.
+      - name: plan_type
+        description: The subscription plan type (free, basic, pro).
+
+  - name: dim_dates
+    description: Date dimension with one row per calendar day.
+    columns:
+      - name: date_day
+        description: Calendar date.
+        tests:
+          - not_null
+          - unique
+      - name: month_start
+        description: First day of the month for this date.
+      - name: year_num
+        description: Year extracted from date.
+      - name: month_num
+        description: Month extracted from date.
+      - name: year_month
+        description: Formatted string YYYY-MM.
+
+  - name: fct_subscriptions
+    description: Fact table at one row per user per subscription per month.
+    columns:
+      - name: subscription_id
+        description: Subscription identifier.
+        tests:
+          - not_null
+      - name: user_id
+        description: User identifier.
+        tests:
+          - not_null
+      - name: month_start
+        description: First day of reporting month.
+        tests:
+          - not_null
+      - name: start_date
+        description: Subscription start date.
+      - name: end_date
+        description: Subscription end date.
+      - name: monthly_price
+        description: Base monthly price of the subscription in Euro.
+      - name: active_flag
+        description: Flag indicating if the subscription was active in this month (1 for active).
+      - name: monthly_revenue
+        description: Monthly recurring revenue attributed to the subscription-month.
+        tests:
+          - not_null
+      - name: subscription_status
+        description: Lifecycle status in the reporting month (new, active, churned, new_and_churned).
+
+  - name: fct_user_activity_monthly
+    description: Fact table tracking user activity metrics on a monthly basis.
+    columns:
+      - name: user_id
+        description: User identifier.
+        tests:
+          - not_null
+      - name: month_start
+        description: First day of the reporting month.
+        tests:
+          - not_null
+      - name: events_last_30d_count
+        description: Number of events the user performed in the trailing 30 days.
+      - name: has_event_last_30d_flag
+        description: Flag indicating if the user had any events in the trailing 30 days (1 for yes, 0 for no).
+
+  - name: agg_subscription_kpis_monthly
+    description: Monthly KPI mart used by Tableau executive dashboard.
+    columns:
+      - name: month_start
+        description: First day of the reporting month.
+      - name: mrr
+        description: Total Monthly Recurring Revenue (MRR) for the month.
+      - name: active_subscribers
+        description: Number of active subscribers in the month.
+      - name: new_subscribers
+        description: Number of new subscribers acquired in the month.
+      - name: churned_subscribers
+        description: Number of subscribers who churned in the month.
+      - name: churn_rate
+        description: Churn rate calculated as churned_subscribers / active_subscribers from previous month.
+      - name: usage_proxy_pct
+        description: Percentage of active users who had at least 1 event in the last 30 days.

@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw_data
+    tables:
+      - name: users
+        identifier: Users
+      - name: subscriptions
+        identifier: Subscriptions
+      - name: events
+        identifier: event
