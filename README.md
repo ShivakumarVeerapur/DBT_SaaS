@@ -99,9 +99,71 @@ To keep the pipeline clean and maintainable, we separate our models into distinc
 | **3. Intermediate** | **Pre-cooking Components:** Preparing reusable complex logics (like date grids). | Never queried by BI tools. Materialized as **Views**. | [int_calendar_dates.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/models/intermediate/int_calendar_dates.sql), [int_subscription_months.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/models/intermediate/int_subscription_months.sql) |
 | **4. Marts** | **The Finished Dish:** Standardized dimensions (`dim_`) and facts (`fct_`) ready for consumption. | Materialized as **Tables** in BigQuery for fast query speeds. | [fct_subscriptions.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/models/marts/fct_subscriptions.sql), [agg_subscription_kpis_monthly.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/models/marts/agg_subscription_kpis_monthly.sql) |
 
+
+---
+
+## 🔍 End-to-End Walkthrough: Tracing a Single User
+
+Let's follow a single user, **User 2**, step-by-step through every layer of our pipeline to see exactly how the SQL transforms their messy data.
+
+### 1. Raw Data Layer (Seeds)
+User 2's data arrives as raw text rows inside our CSVs. Their history is fragmented:
+* **Users table:** signed up on `07.01.23` (European format), lives in `US`, on plan `basic`.
+* **Subscriptions table:** Has two separate subscription lifecycles:
+  1. Sub `1001` starts `07.01.23` and ends `31.03.23` (ended/churned).
+  2. Sub `1018` starts `01.04.23` and has no end date (still active).
+* **Events table:** Contains multiple user actions (e.g. login `08.01.23 10:15`).
+
+---
+
+### 2. Staging Layer (Clean & Standardize)
+`stg_` models parse and clean User 2's rows into standardized database records:
+* **`stg_users`** casts `user_id` to integer and parses the signup date format:
+  ```
+  user_id: 2 | signup_date: 2023-01-07 | country: "US" | plan_type: "basic"
+  ```
+* **`stg_subscriptions`** normalizes the empty end_date for Sub 1018:
+  ```
+  sub_id: 1001 | user_id: 2 | start_date: 2023-01-07 | end_date: 2023-03-31 | monthly_price: 20
+  sub_id: 1018 | user_id: 2 | start_date: 2023-04-01 | end_date: NULL       | monthly_price: 20
+  ```
+
+---
+
+### 3. Intermediate Layer (Expand & Align)
+Now we must calculate monthly snapshots. **`int_subscription_months`** cross-joins subscriptions with our continuous calendar, expanding User 2's records across every month they paid us:
+* **Sub 1001** expands into 3 monthly active rows (Jan, Feb, Mar):
+  * `sub_id: 1001 | month: 2023-01-01`
+  * `sub_id: 1001 | month: 2023-02-01`
+  * `sub_id: 1001 | month: 2023-03-01`
+* **Sub 1018** expands into 2 monthly active rows (Apr, May):
+  * `sub_id: 1018 | month: 2023-04-01`
+  * `sub_id: 1018 | month: 2023-05-01`
+
+---
+
+### 4. Marts Layer (Compute Business KPIs)
+The final marts calculate specific flags and values for the business:
+* **`fct_subscriptions`** looks at the start/end months and assigns subscription statuses:
+  * **Jan 2023:** Status is **`new`** (first month of Sub 1001). MRR is **`€20`**.
+  * **Feb 2023:** Status is **`active`** (continuing subscription). MRR is **`€20`**.
+  * **Mar 2023:** Status is **`churned`** (Sub 1001 ended this month). MRR is **`€20`**.
+  * **Apr 2023:** Status is **`new`** (first month of new Sub 1018). MRR is **`€20`**.
+  * **May 2023:** Status is **`active`** (continuing Sub 1018). MRR is **`€20`**.
+* **`fct_user_activity_monthly`** joins events to flag whether User 2 was active. Since they logged in during January but had zero events in May, they are flagged:
+  * **Jan 2023:** `has_event_last_30d_flag = 1`
+  * **May 2023:** `has_event_last_30d_flag = 0` (this flags User 2 as a "zombie" paying user).
+* **`agg_subscription_kpis_monthly`** aggregates all users. User 2 contributes:
+  * `+€20` to MRR in Jan, Feb, Mar, Apr, May.
+  * `+1` new subscriber in Jan and Apr.
+  * `+1` churned subscriber in March.
+
+This structured transformation creates a direct, auditable path from raw files to the Tableau dashboard!
+
 ---
 
 ## ⚡ Advanced Implementations
+
 
 This project implements industry-standard data warehouse patterns:
 
