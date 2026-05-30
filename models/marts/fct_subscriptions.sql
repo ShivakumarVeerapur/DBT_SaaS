@@ -1,3 +1,12 @@
+{{
+  config(
+    materialized='incremental',
+    unique_key=['subscription_id', 'month_start'],
+    on_schema_change='sync_all_columns'
+  )
+}}
+
+
 with subscription_months as (
 
     select
@@ -48,3 +57,8 @@ select
     end as churned_subscriber_flag
 
 from subscription_months
+
+{% if is_incremental() %}
+  where month_start > (select max(t.month_start) from {{ this }} t)
+{% endif %}
+
