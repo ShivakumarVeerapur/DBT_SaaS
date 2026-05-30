@@ -35,7 +35,7 @@ graph TD
     subgraph Staging [2. Staging Layer - Cleaning & Casting]
         stg_U["stg_users<br/>(view: dates parsed, strings trimmed)"]
         stg_S["stg_subscriptions<br/>(view: empty ends to NULL, types cast)"]
-        stg_E["stg_events<br/>(incremental table: parsed timestamps)"]
+        stg_E["stg_events<br/>(view: parsed timestamps)"]
     end
 
     %% Intermediate Views
@@ -48,7 +48,7 @@ graph TD
     subgraph Marts [4. Marts Layer - Dimensional Modeling]
         dim_U["dim_users<br/>(table: clean user dimension)"]
         dim_D["dim_dates<br/>(table: date dimension with calendar flags)"]
-        fct_S["fct_subscriptions<br/>(table: core MRR, status, & churn flags)"]
+        fct_S["fct_subscriptions<br/>(incremental table: core MRR, status, & churn flags)"]
         fct_UA["fct_user_activity_monthly<br/>(table: 30-day rolling engagement flags)"]
         agg_KPI["agg_subscription_kpis_monthly<br/>(table: dashboard rollup of all metrics)"]
     end
@@ -168,15 +168,23 @@ This structured transformation creates a direct, auditable path from raw files t
 This project implements industry-standard data warehouse patterns:
 
 ### 1. Incremental Materialization (Saves Query Cost)
-Instead of rebuilding the entire event table from scratch every run, [stg_events.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/models/staging/stg_events.sql) is materialized as **`incremental`**.
-* **First Run:** dbt pulls all events and creates a table.
-* **Subsequent Runs:** dbt queries `MAX(event_timestamp)` currently in the table, selects only the *newest* events from the raw logs, and **merges** them.
-* **Why it matters:** In production with billions of log rows, this cuts processing costs by 99%.
+Instead of rebuilding the entire historical model from scratch on every run, [fct_subscriptions.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/models/marts/fct_subscriptions.sql) is materialized as **`incremental`**.
+* **First Run:** dbt builds the initial fact table containing all subscription months.
+* **Subsequent Runs:** dbt queries the maximum `month_start` value in the target table, and merges only new rows that have a newer month.
+* **Unique Keys:** It uses the compound unique key `['subscription_id', 'month_start']` to run clean merges on BigQuery.
+* **Why it matters:** In production with millions of customers across years of history, this prevents expensive full-table scans and rebuilds.
 
 ### 2. History Tracking Snapshots (SCD Type 2)
-What happens if user 30 changes their subscription plan from `basic` to `pro`? The raw database overwrites the record, losing history.
-* We created [snapshots/snp_users.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/snapshots/snp_users.sql) using the `check` strategy.
-* On execution, dbt detects changes and maintains a historical trail:
+What happens when user details or subscription plans change over time (e.g. upgrading plans or updating pricing)? The raw source database often overwrites records, destroying historical truth. We track these changes over time using three dbt snapshots:
+
+1. **[snp_users.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/snapshots/snp_users.sql) (Check Strategy):**
+   * Tracks user attribute changes (specifically `plan_type` and `country`) over time.
+2. **[snp_subscriptions.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/snapshots/snp_subscriptions.sql) (Check Strategy):**
+   * Tracks subscription changes (specifically `monthly_price` and `end_date`).
+3. **[snp_users_timestamps.sql](file:///e:/Data_Engg_Projects/DBT/dish_assignment/dish_assignment/snapshots/snp_users_timestamps.sql) (Timestamp Strategy):**
+   * Tracks user changes using the `signup_date` timestamp column as the update indicator.
+
+On execution (`dbt snapshot`), dbt detects changes and maintains a historical trail for each target row:
   ```
   +---------+-----------+---------------------+---------------------+
   | user_id | plan_type |   dbt_valid_from    |    dbt_valid_to     |
