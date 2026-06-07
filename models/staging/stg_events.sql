@@ -1,6 +1,6 @@
 with source as (
 
-    select * from {{ ref('event') }}
+    select * from {{ source('raw', 'events') }}
     
 )
 

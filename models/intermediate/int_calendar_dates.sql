@@ -1,3 +1,11 @@
+{{
+  config(materialized='ephemeral')
+}}
+
+-- Ephemeral: dbt inlines this as a CTE inside any model that ref()'s it.
+-- No BigQuery table or view is created. Zero storage cost.
+-- To see the dates it generates, query intermediate.int_subscription_months.
+
 with user_dates as (
 
     select

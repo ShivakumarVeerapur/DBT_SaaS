@@ -10,6 +10,14 @@
    )
 }}
 
-select * from {{ ref('stg_users') }}
+select
+    user_id,
+    signup_date,
+    country,
+    plan_type,
+    -- Cast DATE → TIMESTAMP so it matches what the 'timestamp' strategy expects.
+    -- In production you'd use a real updated_at TIMESTAMP from the source system.
+    cast(signup_date as timestamp) as updated_at
+from {{ ref('stg_users') }}
 
 {% endsnapshot %}
