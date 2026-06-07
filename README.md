@@ -25,34 +25,34 @@ dbt compiles your SQL files and automatically determines the order in which tabl
 ```mermaid
 graph TD
     %% BigQuery Raw Tables (source)
-    subgraph Raw [1. BigQuery Raw Tables - External Source]
+    subgraph Raw ["1. BigQuery Raw Tables - External Source"]
         R_Users["🗄️ raw_data.Users<br/>(loaded by ingestion tool)"]
         R_Subs["🗄️ raw_data.Subscriptions<br/>(loaded by ingestion tool)"]
         R_Events["🗄️ raw_data.event<br/>(loaded by ingestion tool)"]
     end
 
     %% Staging Views
-    subgraph Staging [2. Staging Layer - source() → Clean & Cast]
+    subgraph Staging ["2. Staging Layer - source() → Clean & Cast"]
         stg_U["stg_users<br/>(view: dates parsed, strings trimmed)"]
         stg_S["stg_subscriptions<br/>(view: empty ends to NULL, types cast)"]
         stg_E["stg_events<br/>(view: parsed timestamps)"]
     end
 
     %% Snapshots
-    subgraph Snaps [3. Snapshots - SCD Type 2 History]
+    subgraph Snaps ["3. Snapshots - SCD Type 2 History"]
         snp_U["snp_users<br/>(check: plan_type, country)"]
         snp_S["snp_subscriptions<br/>(check: monthly_price, end_date)"]
         snp_UT["snp_users_timestamp<br/>(timestamp: updated_at)"]
     end
 
     %% Intermediate Tables
-    subgraph Intermediate [4. Intermediate Layer - Business Components]
+    subgraph Intermediate ["4. Intermediate Layer - Business Components"]
         int_Cal["int_calendar_dates<br/>(ephemeral: date spine CTE, no BQ object)"]
         int_Subs["int_subscription_months<br/>(incremental table: expands snapshot history per month)"]
     end
 
     %% Marts Tables
-    subgraph Marts [5. Marts Layer - Dimensional Modeling]
+    subgraph Marts ["5. Marts Layer - Dimensional Modeling"]
         dim_U["dim_users<br/>(table: clean user dimension)"]
         dim_D["dim_dates<br/>(table: date dimension with calendar flags)"]
         fct_S["fct_subscriptions<br/>(incremental table: MRR, status & churn with full price history)"]
@@ -61,7 +61,7 @@ graph TD
     end
 
     %% BI Layer
-    subgraph BI [6. Business Intelligence]
+    subgraph BI ["6. Business Intelligence"]
         Tableau["📊 Tableau Dashboard<br/>(MRR, Churn, Active Subs, Engagement)"]
     end
 
