@@ -66,9 +66,9 @@ graph TD
     end
 
     %% Connections
-    R_Users -->|source()| stg_U
-    R_Subs -->|source()| stg_S
-    R_Events -->|source()| stg_E
+    R_Users -->|"source()"| stg_U
+    R_Subs -->|"source()"| stg_S
+    R_Events -->|"source()"| stg_E
 
     stg_U --> snp_U
     stg_U --> snp_UT
@@ -76,7 +76,7 @@ graph TD
 
     stg_U --> int_Cal
     stg_S --> int_Cal
-    snp_S -->|ref()| int_Subs
+    snp_S -->|"ref()"| int_Subs
     int_Cal -.->|ephemeral CTE| int_Subs
 
     stg_U --> dim_U
